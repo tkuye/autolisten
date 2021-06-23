@@ -1,0 +1,5 @@
+*.ogg
+__pycache__/*
+*.egg-info
+*.log
+*.pyc
