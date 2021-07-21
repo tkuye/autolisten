@@ -13,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../"))
 
 import src.autolisten.recorder as recorder
 import src.autolisten.tools as tools
+import src.autolisten.delete as delete
 
 
 class TestRecorder(unittest.TestCase):
@@ -56,7 +57,7 @@ class TestTools(unittest.TestCase):
 
     def test_format_date(self):
         # Change date depending when test is ran
-        self.assertEqual(tools.format_date_now(), "2021-05-28")
+        self.assertEqual(tools.format_date_now(), "2021-07-21")
 
     def test_directories(self):
 
@@ -89,6 +90,29 @@ def cleanup_files():
 
 def cleanup_dir():
     shutil.rmtree(pathlib.Path(os.getcwd() + "/" + tools.format_date_now()))
+
+
+class TestDeletion(unittest.TestCase):
+    def test_date_parser(self):
+        date_parsed = delete.date_parser(0)
+        self.assertEqual(date_parsed, datetime.now())
+
+    def test_get_dirs(self):
+        path = pathlib.Path(os.getcwd() + "/test-dir")
+        os.mkdir(path, mode=tools.FULL_READ_WRITE_PERMISSIONS)
+        self.assertEqual(len(delete.get_dirs(path)), 0)
+        self.addCleanup(shutil.rmtree, path)
+
+    def test_delete_folders(self):
+        opath = pathlib.Path(os.getcwd() + "/test-dirs")
+        os.mkdir(opath, mode=tools.FULL_READ_WRITE_PERMISSIONS)
+        for i in range(0, 21):
+            path = opath / tools.format_date(datetime.now() - timedelta(days=i))
+            os.mkdir(path, mode=tools.FULL_READ_WRITE_PERMISSIONS)
+        delete.delete_folders(opath, 7)
+
+        self.assertEqual(len(delete.get_dirs(opath)), 7)
+        self.addCleanup(shutil.rmtree, opath)
 
 
 class TestCommandLine(unittest.TestCase):
