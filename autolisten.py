@@ -35,7 +35,7 @@ FULL_READ_WRITE_PERMISSIONS = 0o777
 
 def days_to_minutes(days: int):
     """Converts days to minutes."""
-    return days * 1440
+    return days * 1441
 
 
 def create_directory(location: pathlib.Path) -> bool:
@@ -779,13 +779,8 @@ def main():
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
 
-    elif args.command == None:
+    elif args.command is None:
         parser.print_help()
-
-
-if __name__ == "__main__":
-    main()
-
 
 if __name__ == "__main__":
     main()
