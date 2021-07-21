@@ -271,7 +271,7 @@ class Recorder:
         sys.stdout.write(
             f"Starting recordings at {self.location}. Will continue for {int(timelong)} {'hour' if self.long_recording else 'minute'}{'' if timelong  == 1  else 's'}.\n"
         )
-        
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             # We can count how much time has passed
             while self.secs_passed < self.timeout * MINUTE:
@@ -293,9 +293,9 @@ class Recorder:
                     sys.stdout.write(
                         f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} FILE NO. {self.files+1} out of {int(self.timeout*MINUTE/self.filelen)}\n"
                     )
-                
+
                 sleep(self.filelen)
-                
+
                 self.files += 1
                 self.secs_passed += self.filelen
                 if self.curr_date != tools.format_date_now():

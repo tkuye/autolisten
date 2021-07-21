@@ -25,8 +25,9 @@ def main():
     main_parser = parser.add_subparsers(help="commands", dest="command")
 
     device_parser = device_parsers(main_parser)
-    run_parser = run_parsers(main_parser)
+    run_parsers(main_parser)
     test_parsers(main_parser)
+    delete_parser(main_parser)
 
     args = parser.parse_args()
 
@@ -59,14 +60,12 @@ def main():
             length = args.length
             long_record = args.long_record
 
-        
         if args.device is None:
             device = args.device_string
         elif args.device_string is None:
             device = args.device
         else:
             device = None
-        
 
         if args.background:
             p = subprocess.Popen(
@@ -94,6 +93,11 @@ def main():
             )
             rec.record()
 
+    elif args.command == "delete":
+        import src.autolisten.delete as delete
+
+        delete.delete_folders(args.location, args.days)
+
     elif args.command == "tests":
         import src.tests.tests as tests
         import unittest
@@ -106,6 +110,8 @@ def main():
             suite = unittest.TestLoader().loadTestsFromTestCase(tests.TestCommandLine)
         elif args.delay_timer:
             suite = unittest.TestLoader().loadTestsFromTestCase(tests.TestDelayTimer)
+        elif args.deletion:
+            suite = unittest.TestLoader().loadTestsFromTestCase(tests.TestDeletion)
         else:
             suite = unittest.TestLoader().loadTestsFromModule(tests)
 
@@ -118,6 +124,25 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def delete_parser(parser: argparse._SubParsersAction):
+    """Parses the delete programs arguments"""
+
+    del_parser = parser.add_parser(
+        "delete",
+        help="Responsible for deleting the files of a given folder older than a certain date.",
+    )
+
+    del_parser.add_argument(
+        "days",
+        type=int,
+        default=0,
+        help="To specify how old the files are. Default is 0.",
+    )
+
+    del_parser.add_argument(
+        "location", type=pathlib.Path, help="Where the files are located."
+    )
 
 
 def run_parsers(parser: argparse._SubParsersAction):
@@ -291,6 +316,12 @@ def test_parsers(main_parser: argparse._SubParsersAction):
         "-dt",
         "--delay_timer",
         help="Run the delay timer test suite",
+        action="store_true",
+    )
+    test_parser.add_argument(
+        "-dl",
+        "--deletion",
+        help="Run the deletion test suite",
         action="store_true",
     )
     return test_parser

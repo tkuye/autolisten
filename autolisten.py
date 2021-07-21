@@ -35,7 +35,7 @@ FULL_READ_WRITE_PERMISSIONS = 0o777
 
 def days_to_minutes(days: int):
     """Converts days to minutes."""
-    return days * 1440
+    return days * 1441
 
 
 def create_directory(location: pathlib.Path) -> bool:
@@ -98,11 +98,12 @@ def get_filename(record_time: int, directory: str) -> pathlib.Path:
 class Log(object):
     """Base Class for both logging and writing to the console and the log file."""
 
-    def __init__(self, location: str=None):
+    def __init__(self, location: str = None):
         try:
             self.logfile = open(os.path.join(os.getcwd(), "auto.log"), "a")
         except PermissionError:
             self.logfile = open(os.path.join(location, "auto.log"), "a")
+
     def write(self, message):
         self.logfile.write(message)
 
@@ -132,7 +133,7 @@ class WriteLog(Log):
 class ErrorLog(Log):
     """Stderr log writer to auto.log and the stderr write stream."""
 
-    def __init__(self, location: str=None):
+    def __init__(self, location: str = None):
         super(ErrorLog, self).__init__(location)
         self.errors = sys.stderr
 
@@ -244,8 +245,7 @@ class WriterStream:
                 f.close()
         except IOError as e:
             sys.stderr.write("ERROR: {0}".format(e))
-        except Exception as e:
-            sys.stderr.write("ERROR: {0}".format(e))
+
 
 
 class DelayedError(Exception):
@@ -392,7 +392,7 @@ class Recorder:
         sys.stdout.write(
             f"Starting recordings at {self.location}. Will continue for {int(timelong)} {'hour' if self.long_recording else 'minute'}{'' if timelong  == 1  else 's'}.\n"
         )
-        
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             # We can count how much time has passed
             while self.secs_passed < self.timeout * MINUTE:
@@ -414,9 +414,9 @@ class Recorder:
                     sys.stdout.write(
                         f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} FILE NO. {self.files+1} out of {int(self.timeout*MINUTE/self.filelen)}\n"
                     )
-                
+
                 sleep(self.filelen)
-                
+
                 self.files += 1
                 self.secs_passed += self.filelen
                 if self.curr_date != format_date_now():
@@ -424,9 +424,7 @@ class Recorder:
                     create_directory(self.location)
                     if self.deletion != -1:
 
-                        executor.submit(
-                            cleanup_files, self.deletion, self.location
-                        )
+                        executor.submit(cleanup_files, self.deletion, self.location)
                     self.curr_date = format_date_now()
                 sys.stdout.flush()
                 sys.stderr.flush()
@@ -470,11 +468,31 @@ class Recorder:
         if results[0] == -1:
             sys.stderr.write(f"ERROR: {results[1]}\n")
 
+
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
         sys.stderr.write("error: %s\n" % message)
         self.print_help()
         sys.exit(1)
+
+
+def delete_parser(parser: argparse._SubParsersAction):
+    del_parser = parser.add_parser(
+        "delete",
+        help="Responsible for deleting the files of a given folder older than a certain date.",
+    )
+
+    del_parser.add_argument(
+        "days",
+        type=int,
+        default=0,
+        help="To specify how old the files are. Default is 0.",
+    )
+
+    del_parser.add_argument(
+        "location", type=pathlib.Path, help="Where the files are located."
+    )
+
 
 def run_parsers(parser: argparse._SubParsersAction):
     """Parses main programs arguments"""
@@ -509,7 +527,7 @@ def run_parsers(parser: argparse._SubParsersAction):
             help="The location to save the files to. Both Posix and Windows Syntax will work.",
             type=pathlib.Path,
         )
-        
+
         if _parser == no_delay_parser:
             _parser.add_argument(
                 "timeout",
@@ -659,7 +677,6 @@ def test_parsers(main_parser: argparse._SubParsersAction):
     return test_parser
 
 
-# Entry point
 def main():
     """Main will be responsible for calling and executing the program in recorder.py."""
     parser = MyParser(
@@ -671,6 +688,7 @@ def main():
     device_parser = device_parsers(main_parser)
     run_parsers(main_parser)
     test_parsers(main_parser)
+    delete_parser(main_parser)
 
     args = parser.parse_args()
 
@@ -703,18 +721,16 @@ def main():
             length = args.length
             long_record = args.long_record
 
-        
         if args.device is None:
             device = args.device_string
         elif args.device_string is None:
             device = args.device
         else:
             device = None
-        
 
         if args.background:
             p = subprocess.Popen(
-                f"{sys.executable} -c \"from src.autolisten.recorder import Recorder; Recorder(r'{args.location}', {args.timeout}, {args.delete}, {length}, {args.verbose}, {args.channels}, {args.background}, {long_record}, {device}, {delay}, {closest}, {args.file_location}).record()\"",
+                f"{sys.executable} -c \"from src.autolisten.recorder import Recorder; Recorder(r'{args.location}', {args.timeout}, {args.delete}, {length}, {args.verbose}, {args.channels}, {args.background}, {long_record}, {device}, {delay}, {closest}).record()\"",
                 shell=True,
                 close_fds=True,
             )
@@ -735,9 +751,13 @@ def main():
                 sound_device=device,
                 delay=delay,
                 closest=closest,
-                log_file_location=args.file_location
             )
             rec.record()
+
+    elif args.command == "delete":
+        import src.autolisten.delete as delete
+
+        delete.delete_folders(args.location, args.days)
 
     elif args.command == "tests":
         import src.tests.tests as tests
@@ -751,17 +771,16 @@ def main():
             suite = unittest.TestLoader().loadTestsFromTestCase(tests.TestCommandLine)
         elif args.delay_timer:
             suite = unittest.TestLoader().loadTestsFromTestCase(tests.TestDelayTimer)
+        elif args.deletion:
+            suite = unittest.TestLoader().loadTestsFromTestCase(tests.TestDeletion)
         else:
             suite = unittest.TestLoader().loadTestsFromModule(tests)
 
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
 
-    elif args.command == None:
+    elif args.command is None:
         parser.print_help()
-
 
 if __name__ == "__main__":
     main()
-
-
